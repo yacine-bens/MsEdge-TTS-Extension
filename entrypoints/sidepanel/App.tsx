@@ -7,15 +7,19 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 console.log('out of app');
 
 function App() {
-    console.log('inside app');
+    // console.log('inside app');
 
 
     const DEFAULT_VOICE = 'en-US-AndrewNeural';
 
     const tts = new MsEdgeTTS();
 
-    const [languages, setLanguages] = useState({} as { [key: string]: { [key: string]: any[] } });
+    const [data, setData] = useState({} as { [key: string]: { [key: string]: any[] } });
     const [loading, setLoading] = useState(true);
+
+    const [languages, setLanguages] = useState([] as string[]);
+    const [countries, setCountries] = useState([] as string[]);
+    const [voices, setVoices] = useState([] as any[]);
 
     const [language, setLanguage] = useState('');
     const [country, setCountry] = useState('');
@@ -29,24 +33,24 @@ function App() {
     const speakText = async (txt: string) => {
         setPending(true);
 
-        console.log('h0');
+        // console.log('h0');
         // await tts.setMetadata(voice, OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
         const { voice } = await chrome.storage.local.get('voice');
         console.log('voice:', voice);
         await tts.setMetadata(voice || DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-        console.log('h1');
+        // console.log('h1');
         const readable = tts.toStream(txt);
-        console.log('h2');
+        // console.log('h2');
         let data64: any = '';
 
         readable.on('data', data => {
-            console.log('h3');
+            // console.log('h3');
             data64 = Buffer.concat([Buffer.from(data64), Buffer.from(data)]);
-            console.log('h4');
+            // console.log('h4');
         });
 
         readable.on('end', async () => {
-            console.log('h5');
+            // console.log('h5');
             const blob = new Blob([data64], { type: 'audio/mpeg' });
 
             console.log(blob.size);
@@ -94,70 +98,126 @@ function App() {
 
 
         tts.getVoices()
-            .then(voices => { setLanguages(formatVoices(voices)); setLoading(false); })
+            .then(voices => { setData(formatVoices(voices)); setLoading(false); })
             .catch(e => console.log(e));
     }, []);
 
     useEffect(() => {
+        if (!data) return;
+        setLanguages(() => {
+            // (async () => {
+            //     console.log('1.1');
+            //     const { language } = await chrome.storage.local.get('language');
+            //     setLanguage(language || '');
+            //     console.log('1.2');
+            //     // setCountry(country || '');
+            //     // setVoice(voice || '');
+            // })();
+            return Object.keys(data);
+        });
+    }, [data]);
+
+    useEffect(() => {
+        if (!languages || !languages.length) return;
         (async () => {
-            console.log('1.1');
-            const { language } = await chrome.storage.local.get('language');
-            setLanguage(language || '');
-            console.log('1.2');
-            // setCountry(country || '');
-            // setVoice(voice || '');
+            const { language: storageLanguage } = await chrome.storage.local.get('language');
+            setLanguage(storageLanguage || '');
         })();
     }, [languages]);
-    
+
     useEffect(() => {
-        (async () => {
-            console.log('2.1');
-            const { language: storageLanguage } = await chrome.storage.local.get('language');
-            if (language !== storageLanguage) {
-                console.log('2.2');
-                setCountry('');
-                setVoice('');
-                // if (language) chrome.storage.local.set({ language });
-                chrome.storage.local.set({ language });
-            }
-            else {
-                console.log('2.3');
-                const { country } = await chrome.storage.local.get('country');
-                setCountry(country || '');
-            }
-        })();
+        if (!language || !data[language]) return;
+        setCountries(() => {
+            (async () => {
+                console.log('2.1');
+                const { language: storageLanguage } = await chrome.storage.local.get('language');
+                if (language !== storageLanguage) {
+                    console.log('2.2');
+                    setCountry('');
+                    setVoice('');
+                    // if (language) chrome.storage.local.set({ language });
+                    chrome.storage.local.set({ language });
+                    chrome.storage.local.remove(['country', 'voice']);
+                }
+                else {
+                    console.log('2.3');
+                    const { country } = await chrome.storage.local.get('country');
+                    setCountry(country || '');
+                }
+            })();
+            return Object.keys(data[language]);
+        });
     }, [language]);
-    
+
     useEffect(() => {
+        if (!countries || !countries.length) return;
         (async () => {
-            console.log('3.1');
-            const { country: storageCountry } = await chrome.storage.local.get('country');
-            if(country !== storageCountry) {
-                console.log('3.2');
-                setVoice('');
-                // if (country) chrome.storage.local.set({ country });
-                chrome.storage.local.set({ country });
-            }
-            else {
-                console.log('3.3');
-                const {voice} = await chrome.storage.local.get('voice');
-                setVoice(voice || '');
-            }
+            const { country } = await chrome.storage.local.get('country');
+            setCountry(country || '');
         })();
+    }, [countries]);
+
+    useEffect(() => {
+        if (!country || !data[language] || !data[language][country]) return;
+        setVoices(() => {
+            (async () => {
+                console.log('3.1');
+                const { country: storageCountry } = await chrome.storage.local.get('country');
+                if (country !== storageCountry) {
+                    console.log('3.2');
+                    setVoice('');
+                    // if (country) chrome.storage.local.set({ country });
+                    chrome.storage.local.set({ country });
+                    console.log('removing voice');
+                    chrome.storage.local.remove('voice');
+                }
+                else {
+                    console.log('3.3');
+                    const { voice: storageVoice } = await chrome.storage.local.get('voice');
+                    console.log('voiceee', storageVoice);
+                    
+                    setVoice(storageVoice || '');
+                }
+            })();
+            return data[language][country];
+        });
     }, [country]);
 
     useEffect(() => {
-        console.log('4');
-        if (voice) chrome.storage.local.set({ voice });
+        console.log('voices:', voices);
+        if (!voices || !voices.length) return;
+        (async () => {
+            const { voice: storageVoice } = await chrome.storage.local.get('voice');
+            console.log('voices 1:', storageVoice);
+            console.log('voices 2:', voice);
+            
+            setVoice(storageVoice || '');
+        })();
+    }, [voices]);
+
+    useEffect(() => {
+        // console.log('4');
+        console.log('voice:', voice);
+        console.log('country:', country);
+        if (!voice) return;
+        (async () => {
+            const { voice: storageVoice } = await chrome.storage.local.get('voice');
+            if (voice !== storageVoice) {
+                chrome.storage.local.set({ voice });
+            }
+        })();
     }, [voice]);
 
     return (
         <>
             {/* <Box sx={{ boxShadow: 4, padding: 1, borderRadius: '10px' }}> */}
             <Box>
-                <BasicSelect onChange={(value: string) => setLanguage(value)} label={'Language'} items={loading ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : Object.keys(languages)} value={language} />
-                <BasicSelect isDisabled={!language.length} onChange={(value: string) => setCountry(value)} label={'Country'} items={language && languages[language] && Object.keys(languages[language])} value={country} />
-                <BasicSelect isDisabled={!country.length} onChange={(value: string) => setVoice(value)} label={'Voice'} items={country && languages[language] && languages[language][country] || []} value={voice} />
+                {/* <BasicSelect onChange={(value: string) => setLanguage(value)} label={'Language'} items={loading ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : Object.keys(data)} value={language} />
+                <BasicSelect isDisabled={!language.length} onChange={(value: string) => setCountry(value)} label={'Country'} items={language && data[language] && Object.keys(data[language])} value={country} />
+                <BasicSelect isDisabled={!country.length} onChange={(value: string) => setVoice(value)} label={'Voice'} items={country && data[language] && data[language][country] || []} value={voice} /> */}
+                <BasicSelect onChange={(value: string) => setLanguage(value)} label={'Language'} items={loading ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : languages} value={language} />
+                <BasicSelect isDisabled={!language.length} onChange={(value: string) => setCountry(value)} label={'Country'} items={language && languages && countries} value={country} />
+                <BasicSelect isDisabled={!country.length} onChange={(value: string) => setVoice(value)} label={'Voice'} items={country && languages && voices} value={voice} />
                 <Box sx={{ margin: '15px 0px' }}>
                     <TextField value={text} onChange={e => setText(e.target.value)} fullWidth label={'Text'} required placeholder='Enter text to be spoken' multiline minRows={3} maxRows={20} />
                     <Box sx={{ position: 'relative', margin: '15px 0 0' }}>

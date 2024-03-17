@@ -2,7 +2,7 @@ export default defineBackground({
   type: 'module',
   include: ['chrome'],
   main: () => {
-    console.log('Hello background!', { id: chrome.runtime.id });
+    // console.log('Hello background!', { id: chrome.runtime.id });
 
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(e => console.log(e));
 

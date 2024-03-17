@@ -7,6 +7,10 @@ import Select from '@mui/material/Select';
 export default function BasicSelect(props: any) {
     const { label, items, isDisabled, onChange, value } = props;
     
+    // console.log('label:', label);
+    // console.log('items:', items);
+    // console.log('value:', value);
+
     return (
         <Box sx={{
             margin: '15px 0px',
@@ -16,12 +20,12 @@ export default function BasicSelect(props: any) {
                 <Select
                     labelId="demo-simple-select-label"
                     id="demo-simple-select"
-                    value={value}
+                    value={items && items.length && value || ''}
                     label={label}
                     onChange={(e) => onChange(e.target.value)}
                     MenuProps={{ PaperProps: { sx: { maxHeight: 360 } } }}
                 >
-                    {items && items.map((item: string | any, idx: number) => (<MenuItem key={idx} value={item.shortName || item}>{item.name || item}</MenuItem>))}
+                    {items.length && items.map((item: string | any, idx: number) => (<MenuItem key={idx} value={item.shortName || item}>{item.name || item}</MenuItem>))}
                 </Select>
             </FormControl>
         </Box>

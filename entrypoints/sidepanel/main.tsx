@@ -9,4 +9,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   // </React.StrictMode>,
 );
 
-console.log('Hello from main.tsx');
+// console.log('Hello from main.tsx');
