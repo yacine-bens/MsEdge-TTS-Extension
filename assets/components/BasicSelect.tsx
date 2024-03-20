@@ -7,10 +7,6 @@ import Select from '@mui/material/Select';
 export default function BasicSelect(props: any) {
     const { label, items, isDisabled, onChange, value } = props;
     
-    // console.log('label:', label);
-    // console.log('items:', items);
-    // console.log('value:', value);
-
     return (
         <Box sx={{
             margin: '15px 0px',

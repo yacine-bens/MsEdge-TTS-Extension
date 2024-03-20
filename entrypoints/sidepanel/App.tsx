@@ -1,21 +1,23 @@
 import { createRef, useEffect, useRef, useState } from 'react';
 import './App.css';
 import BasicSelect from '@/assets/components/BasicSelect';
-import { Box, CircularProgress, Button, TextField } from '@mui/material';
+import { Box, CircularProgress, Button, TextField, Typography, Snackbar, Alert, Slide, SlideProps } from '@mui/material';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import VoiceAppBar from '@/assets/components/VoiceAppBar';
 
-console.log('out of app');
+function SlideTransition(props: SlideProps) {
+    return <Slide {...props} direction="down" />;
+}
 
 function App() {
-    // console.log('inside app');
-
-
     const DEFAULT_VOICE = 'en-US-AndrewNeural';
 
     const tts = new MsEdgeTTS();
 
     const [data, setData] = useState({} as { [key: string]: { [key: string]: any[] } });
-    const [loading, setLoading] = useState(true);
+    const [loadingData, setLoadingData] = useState(true);
+
+    const [currentVoice, setCurrentVoice] = useState('');
 
     const [languages, setLanguages] = useState([] as string[]);
     const [countries, setCountries] = useState([] as string[]);
@@ -26,31 +28,29 @@ function App() {
     const [voice, setVoice] = useState('');
 
     const [text, setText] = useState('');
+    const [textError, setTextError] = useState(false);
     const [pending, setPending] = useState(false);
+
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarAlert, setSnackbarAlert] = useState({ severity: 'success', msg: `Voice is set to ${currentVoice}` } as any);
 
     const audioElement = useRef<HTMLAudioElement | null>(null);
 
     const speakText = async (txt: string) => {
         setPending(true);
 
-        // console.log('h0');
-        // await tts.setMetadata(voice, OUTPUT_FORMAT.WEBM_24KHZ_16BIT_MONO_OPUS);
-        const { voice } = await chrome.storage.local.get('voice');
-        console.log('voice:', voice);
-        await tts.setMetadata(voice || DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-        // console.log('h1');
+        const { voice: storageVoice } = await chrome.storage.local.get('voice');
+        console.log('speaking voice:', storageVoice);
+
+        await tts.setMetadata(storageVoice || DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
         const readable = tts.toStream(txt);
-        // console.log('h2');
         let data64: any = '';
 
         readable.on('data', data => {
-            // console.log('h3');
             data64 = Buffer.concat([Buffer.from(data64), Buffer.from(data)]);
-            // console.log('h4');
         });
 
         readable.on('end', async () => {
-            // console.log('h5');
             const blob = new Blob([data64], { type: 'audio/mpeg' });
 
             console.log(blob.size);
@@ -66,170 +66,162 @@ function App() {
         });
     }
 
+    const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setText(e.target.value);
+        setTextError(!e.target.validity.valid);
+    }
+
+    const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+
+        setSnackbarOpen(false);
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!(e.target as HTMLFormElement).checkValidity() || !text.trim().length) {
+            setTextError(true);
+            return;
+        }
+
+        speakText(text)
+            .catch(e => {
+                console.log(e);
+                setPending(false);
+                showError();
+            });
+    }
+
+    const showError = () => {
+        setSnackbarAlert({ severity: 'error', msg: 'Error, please try again' });
+        setSnackbarOpen(true);
+    };
+
     useEffect(() => {
         chrome.storage.session.onChanged.addListener((changes) => {
-            console.log('changes');
             for (let change in changes) {
                 if (change === 'text' && changes[change].newValue) {
-                    console.log('text change:', changes[change].newValue);
                     setText(changes[change].newValue);
-                    speakText(changes[change].newValue);
+                    speakText(changes[change].newValue)
+                        .catch(e => {
+                            console.log(e);
+                            setPending(false);
+                            showError();
+                        })
                 }
             }
         });
 
-        // get text and voice from storage
         (async () => {
-            // const { voice: storageVoice } = await chrome.storage.local.get('voice');
-            // setVoice(storageVoice || DEFAULT_VOICE);
-            const { text: storageText } = await chrome.storage.session.get('text');
+            const { voice: storageVoice } = await chrome.storage.local.get('voice');
+            setCurrentVoice(storageVoice || DEFAULT_VOICE);
 
-            const { language, country, voice } = await chrome.storage.local.get(['language', 'country', 'voice']);
-            console.log(language, country, voice);
+            console.log('storageVoice:', storageVoice);
+
+            const { text: storageText } = await chrome.storage.session.get('text');
 
             if (storageText) {
                 setText(storageText);
-                try {
-                    await speakText(storageText);
-                }
-                catch (e) { console.log(e); }
+                speakText(storageText)
+                    .catch(e => {
+                        console.log(e);
+                        setPending(false);
+                        showError();
+                    });
             }
         })();
 
-
         tts.getVoices()
-            .then(voices => { setData(formatVoices(voices)); setLoading(false); })
-            .catch(e => console.log(e));
+            .then(voices => { setData(formatVoices(voices)); setLoadingData(false); })
+            .catch(e => {
+                console.log(e);
+                setLoadingData(false);
+                showError();
+            });
     }, []);
 
     useEffect(() => {
         if (!data) return;
-        setLanguages(() => {
-            // (async () => {
-            //     console.log('1.1');
-            //     const { language } = await chrome.storage.local.get('language');
-            //     setLanguage(language || '');
-            //     console.log('1.2');
-            //     // setCountry(country || '');
-            //     // setVoice(voice || '');
-            // })();
-            return Object.keys(data);
-        });
+        setLanguages(Object.keys(data));
     }, [data]);
 
     useEffect(() => {
-        if (!languages || !languages.length) return;
-        (async () => {
-            const { language: storageLanguage } = await chrome.storage.local.get('language');
-            setLanguage(storageLanguage || '');
-        })();
-    }, [languages]);
-
-    useEffect(() => {
         if (!language || !data[language]) return;
-        setCountries(() => {
-            (async () => {
-                console.log('2.1');
-                const { language: storageLanguage } = await chrome.storage.local.get('language');
-                if (language !== storageLanguage) {
-                    console.log('2.2');
-                    setCountry('');
-                    setVoice('');
-                    // if (language) chrome.storage.local.set({ language });
-                    chrome.storage.local.set({ language });
-                    chrome.storage.local.remove(['country', 'voice']);
-                }
-                else {
-                    console.log('2.3');
-                    const { country } = await chrome.storage.local.get('country');
-                    setCountry(country || '');
-                }
-            })();
-            return Object.keys(data[language]);
-        });
+        setCountries(Object.keys(data[language]));
+        // chrome.storage.local.set({ voice: { language, country: '', voiceShortName: '' } });
+        setCountry('');
+        setVoice('');
     }, [language]);
 
     useEffect(() => {
-        if (!countries || !countries.length) return;
-        (async () => {
-            const { country } = await chrome.storage.local.get('country');
-            setCountry(country || '');
-        })();
-    }, [countries]);
-
-    useEffect(() => {
         if (!country || !data[language] || !data[language][country]) return;
-        setVoices(() => {
-            (async () => {
-                console.log('3.1');
-                const { country: storageCountry } = await chrome.storage.local.get('country');
-                if (country !== storageCountry) {
-                    console.log('3.2');
-                    setVoice('');
-                    // if (country) chrome.storage.local.set({ country });
-                    chrome.storage.local.set({ country });
-                    console.log('removing voice');
-                    chrome.storage.local.remove('voice');
-                }
-                else {
-                    console.log('3.3');
-                    const { voice: storageVoice } = await chrome.storage.local.get('voice');
-                    console.log('voiceee', storageVoice);
-                    
-                    setVoice(storageVoice || '');
-                }
-            })();
-            return data[language][country];
-        });
+        setVoices(data[language][country]);
+        // chrome.storage.local.set({ voice: { language, country, voiceShortName: '' } });
+        setVoice('');
     }, [country]);
 
     useEffect(() => {
-        console.log('voices:', voices);
-        if (!voices || !voices.length) return;
-        (async () => {
-            const { voice: storageVoice } = await chrome.storage.local.get('voice');
-            console.log('voices 1:', storageVoice);
-            console.log('voices 2:', voice);
-            
-            setVoice(storageVoice || '');
-        })();
-    }, [voices]);
+        if (!voice) return;
+        chrome.storage.local.set({ voice });
+        setCurrentVoice(voice);
+        setSnackbarAlert({ severity: 'success', msg: `Voice is set to ${voice}` });
+        setSnackbarOpen(true);
+    }, [voice]);
 
     useEffect(() => {
-        // console.log('4');
-        console.log('voice:', voice);
-        console.log('country:', country);
-        if (!voice) return;
-        (async () => {
-            const { voice: storageVoice } = await chrome.storage.local.get('voice');
-            if (voice !== storageVoice) {
-                chrome.storage.local.set({ voice });
-            }
-        })();
-    }, [voice]);
+        if (text.length) setTextError(false);
+    }, [text]);
 
     return (
         <>
+            <VoiceAppBar voice={currentVoice} />
             {/* <Box sx={{ boxShadow: 4, padding: 1, borderRadius: '10px' }}> */}
             <Box>
-                {/* <BasicSelect onChange={(value: string) => setLanguage(value)} label={'Language'} items={loading ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : Object.keys(data)} value={language} />
-                <BasicSelect isDisabled={!language.length} onChange={(value: string) => setCountry(value)} label={'Country'} items={language && data[language] && Object.keys(data[language])} value={country} />
-                <BasicSelect isDisabled={!country.length} onChange={(value: string) => setVoice(value)} label={'Voice'} items={country && data[language] && data[language][country] || []} value={voice} /> */}
-                <BasicSelect onChange={(value: string) => setLanguage(value)} label={'Language'} items={loading ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : languages} value={language} />
-                <BasicSelect isDisabled={!language.length} onChange={(value: string) => setCountry(value)} label={'Country'} items={language && languages && countries} value={country} />
-                <BasicSelect isDisabled={!country.length} onChange={(value: string) => setVoice(value)} label={'Voice'} items={country && languages && voices} value={voice} />
-                <Box sx={{ margin: '15px 0px' }}>
-                    <TextField value={text} onChange={e => setText(e.target.value)} fullWidth label={'Text'} required placeholder='Enter text to be spoken' multiline minRows={3} maxRows={20} />
+                <BasicSelect
+                    onChange={(value: string) => setLanguage(value)}
+                    label={'Language'}
+                    items={loadingData ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : languages}
+                    value={language}
+                />
+                <BasicSelect
+                    isDisabled={!language.length}
+                    onChange={(value: string) => setCountry(value)}
+                    label={'Country'}
+                    items={countries}
+                    value={country}
+                />
+                <BasicSelect
+                    isDisabled={!country.length}
+                    onChange={(value: string) => setVoice(value)}
+                    label={'Voice'}
+                    items={voices}
+                    value={voice}
+                />
+                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ margin: '15px 0px' }}>
+                    <TextField
+                        value={text}
+                        onChange={handleTextChange}
+                        fullWidth
+                        label='Text'
+                        required
+                        placeholder='Enter text to be spoken'
+                        multiline
+                        minRows={3}
+                        maxRows={20}
+                        error={textError}
+                        helperText={textError ? "Please enter some text" : ""}
+                    />
                     <Box sx={{ position: 'relative', margin: '15px 0 0' }}>
                         <Button
                             disabled={pending}
-                            onClick={() => { console.log('click!'); speakText(text); }}
                             fullWidth
                             sx={{ padding: '.75rem' }}
                             variant='contained'
+                            type='submit'
                         >
                             Generate Audio
-                            {/* {pending ? <CircularProgress color='inherit' size={28} /> : "Generate Audio"} */}
                         </Button>
                         {pending && (
                             <CircularProgress
@@ -247,6 +239,22 @@ function App() {
                 </Box>
                 <audio ref={el => { audioElement.current = el }} controls style={{ width: '100%' }}></audio>
             </Box>
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={handleClose}
+                TransitionComponent={SlideTransition}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    severity={snackbarAlert.severity}
+                    variant='filled'
+                    sx={{ width: '100%' }}
+                    onClose={handleClose}
+                >
+                    {snackbarAlert.msg}
+                </Alert>
+            </Snackbar>
         </>
     );
 }
