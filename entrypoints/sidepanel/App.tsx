@@ -3,10 +3,8 @@ import './App.css';
 import BasicSelect from '@/assets/components/BasicSelect';
 import { Box, CircularProgress, Button, TextField } from '@mui/material';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
-import VoiceAppBar from '@/assets/components/VoiceAppBar';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
 import useFetch from './useFetch';
-import useData from './useData';
 
 const voiceReducer = (state: any, action: any) => {
     switch (action.type) {
@@ -79,10 +77,6 @@ function App() {
     // Load data from server
     const [voicesLoading, voicesError, languages, countries, voices] = useFetch(voiceState);
 
-    // const [languages] = useData(getLanguages, [voicesData]);
-    // const [countries] = useData(getCountries, [voiceState.language]);
-    // const [voices] = useData(getVoices, [voiceState.language, voiceState.country]);
-    
     const [currentVoice, setCurrentVoice] = useState('');
 
     const [text, setText] = useState('');
@@ -210,7 +204,6 @@ function App() {
 
     return (
         <>
-            <VoiceAppBar voice={currentVoice} />
             {/* <Box sx={{ boxShadow: 4, padding: 1, borderRadius: '10px' }}> */}
             <Box>
                 <BasicSelect
