@@ -1,20 +1,20 @@
 import { createRef, useEffect, useReducer, useRef, useState } from 'react';
 import './App.css';
-import BasicSelect from '@/assets/components/BasicSelect';
 import { Box, CircularProgress, Button, TextField } from '@mui/material';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
 import useFetch from './useFetch';
+import SelectAutocomplete from '@/assets/components/SelectAutocomplete';
 
 const voiceReducer = (state: any, action: any) => {
     switch (action.type) {
         case 'select_language':
-            return { language: action.language, country: '', voice: '' };
+            return { language: action.value, country: '', voice: '' };
         case 'select_country':
-            return { ...state, country: action.country, voice: '' };
+            return { ...state, country: action.value, voice: '' };
         case 'select_voice':
             // TODO: set storage (object: language + country, not only voice)
-            return { ...state, voice: action.voice };
+            return { ...state, voice: action.value };
         default:
             return state;
     }
@@ -77,8 +77,6 @@ function App() {
     // Load data from server
     const [voicesLoading, voicesError, languages, countries, voices] = useFetch(voiceState);
 
-    const [currentVoice, setCurrentVoice] = useState('');
-
     const [text, setText] = useState('');
     const [textError, setTextError] = useState(false);
     const [pending, setPending] = useState(false);
@@ -116,6 +114,13 @@ function App() {
             textDispatch({ type: 'speak_end' });
         });
     }
+
+    const handleChange = (value: string, type: string) => {
+        if (!value) return;
+
+        voiceDispatch({ type, value });
+        alertDispatch({ type: 'close_alert' });
+    };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         // setText(e.target.value);
@@ -177,7 +182,7 @@ function App() {
         (async () => {
             const { voice: storageVoice } = await chrome.storage.local.get('voice');
             // setCurrentVoice(storageVoice || DEFAULT_VOICE);
-            voiceDispatch({ type: 'load_storage_voice', voice: storageVoice });
+            // voiceDispatch({ type: 'load_storage_voice', voice: storageVoice });
 
             console.log('storageVoice:', storageVoice);
 
@@ -204,29 +209,10 @@ function App() {
 
     return (
         <>
-            {/* <Box sx={{ boxShadow: 4, padding: 1, borderRadius: '10px' }}> */}
             <Box>
-                <BasicSelect
-                    onChange={(value: string) => voiceDispatch({ type: 'select_language', language: value })}
-                    label={'Language'}
-                    // TODO: update circular progress
-                    items={voicesLoading ? [<CircularProgress sx={{ margin: '0 40%' }} color='inherit' size={28} />] : languages}
-                    value={voiceState.language}
-                />
-                <BasicSelect
-                    isDisabled={!voiceState.language.length}
-                    onChange={(value: string) => voiceDispatch({ type: 'select_country', country: value })}
-                    label={'Country'}
-                    items={countries}
-                    value={voiceState.country}
-                />
-                <BasicSelect
-                    isDisabled={!voiceState.country.length}
-                    onChange={(value: string) => voiceDispatch({ type: 'select_voice', voice: value })}
-                    label={'Voice'}
-                    items={voices}
-                    value={voiceState.voice}
-                />
+                <SelectAutocomplete options={languages} label="Language" loading={voicesLoading} value={voiceState.language} onChange={(e: any, value: string) => handleChange(value, 'select_language')} />
+                <SelectAutocomplete options={countries} label="Country" value={voiceState.country} onChange={(e: any, value: string) => handleChange(value, 'select_country')} isDisabled={!voiceState.language.length} />
+                <SelectAutocomplete options={voices.map((v: Record<string, any>) => v.name)} label="Voice" value={voiceState.voice} onChange={(e: any, value: string) => handleChange(value, 'select_voice')} isDisabled={!voiceState.country.length} />
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ margin: '15px 0px' }}>
                     <TextField
                         value={text}
