@@ -50,15 +50,12 @@ export default function useFetch(dependency: Record<string, any>) {
 
     useEffect(() => {
         const fetchData = async () => {
-            const tts = new MsEdgeTTS();
-
             dispatch({ type: "SET_LOADING", payload: true });
 
             try {
-                const voices = await tts.getVoices();
-                const formattedVoices = formatVoices(voices);
+                const voices = await getVoices();
 
-                dispatch({ type: "SET_LANGUAGES", payload: formattedVoices });
+                dispatch({ type: "SET_LANGUAGES", payload: voices });
             } catch (err) {
                 dispatch({ type: "SET_ERROR", payload: err });
             } finally {
@@ -81,7 +78,13 @@ export default function useFetch(dependency: Record<string, any>) {
     }, [dependency]);
 
     return [state.loading, state.error, state.languages, state.countries, state.voices];
-}
+};
+
+const getVoices = async () => {
+    const tts = new MsEdgeTTS();
+    const voices = await tts.getVoices();
+    return formatVoices(voices);
+};
 
 const formatVoices = (voices: Record<string, any>): Record<string, any> => {
     return voices.map((v: Record<string, any>) => ({
@@ -92,8 +95,8 @@ const formatVoices = (voices: Record<string, any>): Record<string, any> => {
         shortName: v.ShortName,
     })).reduce((acc: Record<string, any>, voice: Record<string, any>) => {
         acc[voice.language] = acc[voice.language] || {};
-        acc[voice.language][voice.country] = acc[voice.language][voice.country] || [];
-        acc[voice.language][voice.country].push({ name: voice.name, shortName: voice.shortName });
+        acc[voice.language][voice.country] = acc[voice.language][voice.country] || {};
+        acc[voice.language][voice.country][voice.name] = voice.shortName;
 
         return acc;
     }, {});

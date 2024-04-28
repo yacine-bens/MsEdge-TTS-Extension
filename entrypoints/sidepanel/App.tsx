@@ -1,10 +1,10 @@
-import { createRef, useEffect, useReducer, useRef, useState } from 'react';
-import './App.css';
-import { Box, CircularProgress, Button, TextField } from '@mui/material';
-import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import { useEffect, useReducer } from 'react';
+import { Button, TextField } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
-import useFetch from './useFetch';
 import SelectAutocomplete from '@/assets/components/SelectAutocomplete';
+import useFetch from './useFetch';
+import useTTS from './useTTS';
 
 const voiceReducer = (state: any, action: any) => {
     switch (action.type) {
@@ -13,7 +13,6 @@ const voiceReducer = (state: any, action: any) => {
         case 'select_country':
             return { ...state, country: action.value, voice: '' };
         case 'select_voice':
-            // TODO: set storage (object: language + country, not only voice)
             return { ...state, voice: action.value };
         default:
             return state;
@@ -22,18 +21,8 @@ const voiceReducer = (state: any, action: any) => {
 
 const textReducer = (state: any, action: any) => {
     switch (action.type) {
-        case 'text_change':
-            return { ...state, value: action.value, valid: action.valid };
-        case 'storage_text_change':
-            return { ...state, value: action.value };
-        case 'load_storage_text':
-            return { ...state, value: action.value };
-        case 'invalid_text':
-            return { ...state, valid: false };
-        case 'speak_start':
-            return { ...state, pending: true };
-        case 'speak_end':
-            return { ...state, pending: false };
+        case 'set_text':
+            return action.value;
         default:
             return state;
     }
@@ -41,33 +30,27 @@ const textReducer = (state: any, action: any) => {
 
 const alertReducer = (state: any, action: any) => {
     switch (action.type) {
-        case 'open_alert':
-            return { ...state, open: true };
         case 'close_alert':
             return { ...state, open: false };
-        case 'show_error':
-            return { open: true, alert: { severity: 'error', msg: 'Error, please try again' } };
+        case 'voices_error':
+            return { open: true, alert: { severity: 'error', msg: 'Error occured while loading voices' } };
+        case 'audio_error':
+            return { open: true, alert: { severity: 'error', msg: 'Error occured while generating audio' } };
+        case 'generate_audio':
+            return { open: true, alert: { severity: 'info', msg: 'Generating audio...', icon: 'circular-progress' } };
         default:
             return state;
     }
 };
 
 function App() {
-    const DEFAULT_VOICE = 'en-US-AndrewNeural';
-
-    const tts = new MsEdgeTTS();
-
     const [voiceState, voiceDispatch] = useReducer(voiceReducer, {
         language: '',
         country: '',
         voice: '',
     });
 
-    const [textState, textDispatch] = useReducer(textReducer, {
-        value: '',
-        valid: true,
-        pending: false,
-    });
+    const [text, textDispatch] = useReducer(textReducer, '');
 
     const [alertState, alertDispatch] = useReducer(alertReducer, {
         open: false,
@@ -77,43 +60,7 @@ function App() {
     // Load data from server
     const [voicesLoading, voicesError, languages, countries, voices] = useFetch(voiceState);
 
-    const [text, setText] = useState('');
-    const [textError, setTextError] = useState(false);
-    const [pending, setPending] = useState(false);
-
-    const audioElement = useRef<HTMLAudioElement | null>(null);
-
-    const speakText = async (txt: string) => {
-        // setPending(true);
-        textDispatch({ type: 'speak_start' });
-
-        const { voice: storageVoice } = await chrome.storage.local.get('voice');
-        console.log('speaking voice:', storageVoice);
-
-        await tts.setMetadata(storageVoice || DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-        const readable = tts.toStream(txt);
-        let data64: any = '';
-
-        readable.on('data', data => {
-            data64 = Buffer.concat([Buffer.from(data64), Buffer.from(data)]);
-        });
-
-        readable.on('end', async () => {
-            const blob = new Blob([data64], { type: 'audio/mpeg' });
-
-            console.log(blob.size);
-
-            if (blob.size && audioElement.current) {
-                const audioURL = URL.createObjectURL(blob);
-                audioElement.current!.src = audioURL;
-                audioElement.current!.play();
-            }
-
-            await chrome.storage.session.remove('text');
-            // setPending(false);
-            textDispatch({ type: 'speak_end' });
-        });
-    }
+    const { audioUrl, audioLoading, audioError, generateAudio } = useTTS();
 
     const handleChange = (value: string, type: string) => {
         if (!value) return;
@@ -123,155 +70,93 @@ function App() {
     };
 
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        // setText(e.target.value);
-        // setTextError(!e.target.validity.valid);
-        textDispatch({ type: 'text_change', value: e.target.value, valid: e.target.validity.valid });
+        textDispatch({ type: 'set_text', value: e.target.value });
     }
 
     const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
         if (reason === 'clickaway') {
             return;
         }
-
-        // setSnackbarOpen(false);
         alertDispatch({ type: 'close_alert' });
     };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!(e.target as HTMLFormElement).checkValidity() || !text.trim().length) {
-            // setTextError(true);
-            textDispatch({ type: 'invalid_text' });
-            return;
-        }
-
-        speakText(text)
-            .catch(e => {
-                console.log(e);
-                // setPending(false);
-                // showError();
-                textDispatch({ type: 'speak_end' });
-                alertDispatch({ type: 'show_error' });
-            });
+    const handleSubmit = () => {
+        alertDispatch({ type: 'generate_audio' });
+        generateAudio(text, voices[voiceState.voice]);
     }
-
-    const showError = () => {
-        alertDispatch({ type: 'show_error' });
-        // setSnackbarAlert({ severity: 'error', msg: 'Error, please try again' });
-        // setSnackbarOpen(true);
-    };
 
     useEffect(() => {
         chrome.storage.session.onChanged.addListener((changes) => {
             for (let change in changes) {
                 if (change === 'text' && changes[change].newValue) {
-                    // setText(changes[change].newValue);
-                    textDispatch({ type: 'storage_text_change', value: changes[change].newValue });
-                    speakText(changes[change].newValue)
-                        .catch(e => {
-                            console.log(e);
-                            // setPending(false);
-                            textDispatch({ type: 'speak_end' });
-                            alertDispatch({ type: 'show_error' });
-                            // showError();
-                        })
+                    textDispatch({ type: 'set_text', value: changes[change].newValue });
+                    chrome.storage.session.remove('text');
                 }
             }
         });
 
         (async () => {
-            const { voice: storageVoice } = await chrome.storage.local.get('voice');
-            // setCurrentVoice(storageVoice || DEFAULT_VOICE);
-            // voiceDispatch({ type: 'load_storage_voice', voice: storageVoice });
-
-            console.log('storageVoice:', storageVoice);
-
             const { text: storageText } = await chrome.storage.session.get('text');
-
             if (storageText) {
-                // setText(storageText);
-                textDispatch({ type: 'load_storage_text', value: storageText });
-                speakText(storageText)
-                    .catch(e => {
-                        console.log(e);
-                        // setPending(false);
-                        // showError();
-                        textDispatch({ type: 'speak_end' });
-                        alertDispatch({ type: 'show_error' });
-                    });
+                textDispatch({ type: 'set_text', value: storageText });
+                chrome.storage.session.remove('text');
             }
         })();
     }, []);
 
     useEffect(() => {
-        if (text.length) setTextError(false);
-    }, [text]);
+        if (audioUrl) {
+            alertDispatch({ type: 'close_alert' });
+        }
+    }, [audioUrl]);
+
+    useEffect(() => {
+        if (voicesError) alertDispatch({ type: 'voices_error' });
+        else if (audioError) alertDispatch({ type: 'audio_error' });
+    }, [voicesError, audioError]);
 
     return (
         <>
-            <Box>
-                <SelectAutocomplete options={languages} label="Language" loading={voicesLoading} value={voiceState.language} onChange={(e: any, value: string) => handleChange(value, 'select_language')} />
-                <SelectAutocomplete options={countries} label="Country" value={voiceState.country} onChange={(e: any, value: string) => handleChange(value, 'select_country')} isDisabled={!voiceState.language.length} />
-                <SelectAutocomplete options={voices.map((v: Record<string, any>) => v.name)} label="Voice" value={voiceState.voice} onChange={(e: any, value: string) => handleChange(value, 'select_voice')} isDisabled={!voiceState.country.length} />
-                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ margin: '15px 0px' }}>
+            <Grid container margin={1} rowSpacing={2} columns={1}>
+                <Grid xs={1}>
+                    <SelectAutocomplete options={languages} label="Language" loading={voicesLoading} value={voiceState.language} onChange={(e: any, value: string) => handleChange(value, 'select_language')} />
+                </Grid>
+                <Grid xs={1}>
+                    <SelectAutocomplete options={countries} label="Country" value={voiceState.country} onChange={(e: any, value: string) => handleChange(value, 'select_country')} isDisabled={!voiceState.language.length} />
+                </Grid>
+                <Grid xs={1}>
+                    <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice} onChange={(e: any, value: string) => handleChange(value, 'select_voice')} isDisabled={!voiceState.country.length} />
+                </Grid>
+                <Grid xs={1}>
                     <TextField
                         value={text}
                         onChange={handleTextChange}
                         fullWidth
                         label='Text'
-                        required
                         placeholder='Enter text to be spoken'
                         multiline
                         minRows={3}
                         maxRows={20}
-                        error={textError}
-                        helperText={textError ? "Please enter some text" : ""}
                     />
-                    <Box sx={{ position: 'relative', margin: '15px 0 0' }}>
-                        <Button
-                            disabled={pending}
-                            fullWidth
-                            sx={{ padding: '.75rem' }}
-                            variant='contained'
-                            type='submit'
-                        >
-                            Generate Audio
-                        </Button>
-                        {pending && (
-                            <CircularProgress
-                                size={28}
-                                sx={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    marginTop: '-14px',
-                                    marginLeft: '-14px'
-                                }}
-                            />
-                        )}
-                    </Box>
-                </Box>
-                <audio ref={el => { audioElement.current = el }} controls style={{ width: '100%' }}></audio>
-            </Box>
+                </Grid>
+                <Grid xs={1}>
+                    <Button
+                        variant='contained'
+                        sx={{ padding: '.75rem' }}
+                        disabled={audioLoading || !voiceState.voice || !text.trim().length}
+                        fullWidth
+                        onClick={handleSubmit}
+                    >
+                        Generate Audio
+                    </Button>
+                </Grid>
+                <Grid xs={1}>
+                    <audio src={audioUrl} autoPlay controls style={{ width: '100%' }}></audio>
+                </Grid>
+            </Grid>
             <SnackbarAlert open={alertState.open} alert={alertState.alert} onClose={handleClose} />
         </>
     );
-}
-
-const formatVoices = (voices: Record<string, any>): Record<string, any> => {
-    return voices.map((v: Record<string, any>) => ({
-        language: v.FriendlyName.match(/- ([a-zA-Z]+) \(/)[1],
-        country: v.FriendlyName.match(/- .*\(([^)]+)\)/)[1],
-        name: v.FriendlyName.match(/Microsoft (.+) Online/)[1],
-        gender: v.Gender,
-        shortName: v.ShortName
-    })).reduce((acc: Record<string, any>, voice: Record<string, any>) => {
-        acc[voice.language] = acc[voice.language] || {};
-        acc[voice.language][voice.country] = acc[voice.language][voice.country] || [];
-        acc[voice.language][voice.country].push({ name: voice.name, shortName: voice.shortName });
-
-        return acc;
-    }, {});
 }
 
 export default App;
