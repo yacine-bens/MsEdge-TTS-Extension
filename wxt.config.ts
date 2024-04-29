@@ -11,8 +11,9 @@ export default defineConfig({
     ],
   }),
   manifest: {
+    name: "MS Edge TTS (Text to Speech)",
     action: {
-      "default_title": "msedge-tts"
+      "default_title": "MsEdge TTS"
     },
     permissions: [
       "sidePanel",
