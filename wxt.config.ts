@@ -9,6 +9,9 @@ export default defineConfig({
       react(),
       nodePolyfills(),
     ],
+    optimizeDeps: {
+      include: ['@mui/icons-material'],
+    }
   }),
   manifest: {
     name: "MS Edge TTS (Text to Speech)",
