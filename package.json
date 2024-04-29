@@ -1,6 +1,8 @@
 {
   "name": "wxt-starter",
-  "description": "MsEdge TTS Extension",
+  "description": "MsEdge TTS Extension (Text to Speech)",
+  "author": "https://github.com/yacine-bens",
+  "homepage": "https://github.com/yacine-bens/MsEdge-TTS-Extension.git",
   "private": true,
   "version": "1.0.0",
   "type": "module",

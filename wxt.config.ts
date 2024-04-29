@@ -12,6 +12,8 @@ export default defineConfig({
   }),
   manifest: {
     name: "MS Edge TTS (Text to Speech)",
+    author: "https://github.com/yacine-bens",
+    homepage_url: "https://github.com/yacine-bens/MsEdge-TTS-Extension.git",
     action: {
       "default_title": "MsEdge TTS"
     },
