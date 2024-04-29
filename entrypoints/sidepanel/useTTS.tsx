@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MsEdgeTTS, OUTPUT_FORMAT, PITCH, RATE } from "msedge-tts";
 const DEFAULT_VOICE = 'en-US-AndrewNeural';
+import xmlescape from 'xml-escape';
 
 const rateOptions = {
     0: RATE.DEFAULT,
@@ -48,7 +49,8 @@ const getAudioUrl = async (text: string, voice: string, settings: Record<string,
 
     await tts.setMetadata(voice || DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
     return await new Promise<string>(resolve => {
-        const readable = tts.toStream(text, { pitch: pitchOptions[settings.pitch as keyof typeof pitchOptions], rate: rateOptions[settings.rate as keyof typeof rateOptions], volume: 100 });
+        const escapedText = xmlescape(text);
+        const readable = tts.toStream(escapedText, { pitch: pitchOptions[settings.pitch as keyof typeof pitchOptions], rate: rateOptions[settings.rate as keyof typeof rateOptions], volume: 100 });
         let data64: any = '';
 
         readable.on('data', data => {
