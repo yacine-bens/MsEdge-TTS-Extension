@@ -9,6 +9,7 @@ const perBrowserManifest: Record<string, any> = {
       "contextMenus",
       "sidePanel",
     ],
+    minimum_chrome_version: "116",
   }
 }
 
