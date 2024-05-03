@@ -16,7 +16,7 @@ This is a Text-to-Speech browser extension that uses MS Edge Online TTS service.
 ## Installation
 ### - Mozilla / Chrome Web Store
 - [Chrome Web Store](https://chrome.google.com/webstore/detail/oajalfneblkfiejoadecnmodfpnaeblh)
-- [Mozilla Addons (pending review)](#)
+- [Mozilla Addons](https://addons.mozilla.org/en-US/firefox/addon/ms-edge-tts-text-to-speech/)
 ### - Manual Installation
 1. Clone this repository and run `npm i`.
 2. Run `npm run build` for Chrome, `npm run build:firefox` for Firefox.
