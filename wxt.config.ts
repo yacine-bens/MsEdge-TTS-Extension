@@ -10,6 +10,11 @@ const perBrowserManifest: Record<string, any> = {
       "sidePanel",
     ],
     minimum_chrome_version: "116",
+  },
+  firefox: {
+    permissions: [
+      'storage',
+    ]
   }
 }
 
