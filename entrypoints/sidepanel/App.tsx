@@ -9,16 +9,26 @@ import { ExpandMore } from '@mui/icons-material';
 import CustomSlider from '@/assets/components/CustomSlider';
 
 const voiceReducer = (state: any, action: any) => {
+    let currentVoice;
     switch (action.type) {
         case 'select_language':
-            return { language: action.value, country: '', voice: '' };
+            currentVoice = { language: action.value, country: '', voice: '' };
+            break;
         case 'select_country':
-            return { ...state, country: action.value, voice: '' };
+            currentVoice = { ...state, country: action.value, voice: '' };
+            break;
         case 'select_voice':
-            return { ...state, voice: action.value };
+            currentVoice = { ...state, voice: action.value };
+            break;
+        case 'set_voice':
+            currentVoice = { ...action.value };
+            break;
         default:
             return state;
     }
+
+    chrome.storage.local.set({ currentVoice });
+    return { ...currentVoice };
 };
 
 const textReducer = (state: any, action: any) => {
@@ -46,14 +56,23 @@ const alertReducer = (state: any, action: any) => {
 };
 
 const settingsReducer = (state: any, action: any) => {
+    let currentSettings;
     switch (action.type) {
         case 'set_rate':
-            return { ...state, rate: action.value };
+            currentSettings = { ...state, rate: action.value };
+            break;
         case 'set_pitch':
-            return { ...state, pitch: action.value };
+            currentSettings = { ...state, pitch: action.value };
+            break;
+        case 'set_settings':
+            currentSettings = { ...action.value };
+            break;
         default:
             return state;
     }
+
+    chrome.storage.local.set({ currentSettings });
+    return { ...currentSettings };
 };
 
 function App() {
@@ -123,6 +142,9 @@ function App() {
                 textDispatch({ type: 'set_text', value: storageText });
                 chrome.storage.session.remove('text');
             }
+            const { currentVoice, currentSettings } = await chrome.storage.local.get(['currentVoice', 'currentSettings']);
+            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
+            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
         })();
     }, []);
 
@@ -166,8 +188,8 @@ function App() {
                         <AccordionSummary expandIcon={<ExpandMore />} sx={{ fontSize: 'medium' }}>Additional Settings</AccordionSummary>
                         <AccordionDetails>
                             <Stack spacing={2}>
-                                <CustomSlider value={settings.rate} labels={['default', 'x-slow', 'slow', 'medium', 'fast', 'x-fast']} label='Rate' onChange={(e: any, value: number) => handleSliderChange(value, 'set_rate')}/>
-                                <CustomSlider value={settings.pitch} labels={['default', 'x-low', 'low', 'medium', 'high', 'x-high']} label='Pitch' onChange={(e: any, value: number) => handleSliderChange(value, 'set_pitch')}/>
+                                <CustomSlider value={settings.rate} labels={['default', 'x-slow', 'slow', 'medium', 'fast', 'x-fast']} label='Rate' onChange={(e: any, value: number) => handleSliderChange(value, 'set_rate')} />
+                                <CustomSlider value={settings.pitch} labels={['default', 'x-low', 'low', 'medium', 'high', 'x-high']} label='Pitch' onChange={(e: any, value: number) => handleSliderChange(value, 'set_pitch')} />
                             </Stack>
                         </AccordionDetails>
                     </Accordion>

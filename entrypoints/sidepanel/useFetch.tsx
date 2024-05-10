@@ -29,7 +29,19 @@ const initialState: State = {
 const reducer = (state: State, action: Action): State => {
     switch (action.type) {
         case "SET_LANGUAGES":
-            return { ...state, data: action.payload, languages: Object.keys(action.payload).sort() };
+            const data = action.payload.voices;
+            const languages = Object.keys(data).sort();
+            if (action.payload.currentVoice && action.payload.currentVoice.language) {
+                const countries = Object.keys(data[action.payload.currentVoice.language]).sort();
+                if (action.payload.currentVoice.country) {
+                    const voices = data[action.payload.currentVoice.language][action.payload.currentVoice.country];
+                    return { ...state, data, languages, countries, voices };
+                }
+                else {
+                    return { ...state, data, languages, countries }
+                }
+            }
+            return { ...state, data: action.payload.voices, languages: Object.keys(action.payload.voices).sort() };
         case "SET_COUNTRIES":
             if (!state.data[action.payload.language]) return state;
             return { ...state, countries: Object.keys(state.data[action.payload.language]).sort() };
@@ -54,8 +66,9 @@ export default function useFetch(dependency: Record<string, any>) {
 
             try {
                 const voices = await getVoices();
+                const { currentVoice } = await chrome.storage.local.get('currentVoice');
 
-                dispatch({ type: "SET_LANGUAGES", payload: voices });
+                dispatch({ type: "SET_LANGUAGES", payload: { voices, currentVoice } });
             } catch (err) {
                 dispatch({ type: "SET_ERROR", payload: err });
             } finally {
