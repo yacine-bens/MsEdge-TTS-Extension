@@ -1,0 +1,34 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE]"
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill out the sections below to help us understand and prioritize your feature request.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the feature
+      placeholder: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      placeholder: Describe any alternative solutions or features you've considered.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      placeholder: Add any other context or screenshots about the feature request here.
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting this feature! We'll review it and get back to you soon.
