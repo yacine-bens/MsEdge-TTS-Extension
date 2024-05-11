@@ -128,6 +128,11 @@ function App() {
 
     useEffect(() => {
         (async () => {
+            const { text: storageText } = await browser.storage.session.get('text');
+            if (storageText) {
+                textDispatch({ type: 'set_text', value: storageText });
+                browser.storage.session.remove('text');
+            }
             const { currentVoice, currentSettings } = await browser.storage.local.get(['currentVoice', 'currentSettings']);
             if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
             if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
