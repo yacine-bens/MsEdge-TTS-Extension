@@ -14,6 +14,7 @@ const perBrowserManifest: Record<string, any> = {
   firefox: {
     permissions: [
       'storage',
+      "contextMenus",
     ]
   }
 }
