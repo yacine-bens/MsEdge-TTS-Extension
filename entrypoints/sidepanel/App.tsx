@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { Accordion, AccordionDetails, AccordionSummary, Button, Stack, TextField } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
@@ -50,6 +50,8 @@ const alertReducer = (state: any, action: any) => {
             return { open: true, alert: { severity: 'error', msg: 'Error occured while generating audio' } };
         case 'generate_audio':
             return { open: true, alert: { severity: 'info', msg: 'Generating audio...', icon: 'circular-progress' } };
+        case 'no_voice_selected':
+            return { open: true, alert: { severity: 'warning', msg: 'Please select a voice' } };
         default:
             return state;
     }
@@ -124,7 +126,17 @@ function App() {
     const handleSubmit = () => {
         alertDispatch({ type: 'generate_audio' });
         generateAudio(text, voiceState.voice.shortName, settings);
-    }
+    };
+
+    // The listener function captures the state at the time it was defined, and it doesn't get updated state values when they change.
+    // To get the updated values, we use refs to store the state values and update them in the useEffect hook.
+    const voiceStateRef = useRef(voiceState);
+    const settingsRef = useRef(settings);
+
+    useEffect(() => {
+        voiceStateRef.current = voiceState;
+        settingsRef.current = settings;
+    }, [voiceState, settings]);
 
     useEffect(() => {
         chrome.storage.session.onChanged.addListener((changes) => {
@@ -132,19 +144,33 @@ function App() {
                 if (change === 'text' && changes[change].newValue) {
                     textDispatch({ type: 'set_text', value: changes[change].newValue });
                     chrome.storage.session.remove('text');
+                    if (voiceStateRef.current && voiceStateRef.current.voice) {
+                        alertDispatch({ type: 'generate_audio' });
+                        generateAudio(changes[change].newValue, voiceStateRef.current.voice.shortName, settingsRef.current);
+                    }
+                    else {
+                        alertDispatch({ type: 'no_voice_selected' });
+                    }
                 }
             }
         });
 
         (async () => {
+            const { currentVoice, currentSettings } = await chrome.storage.local.get(['currentVoice', 'currentSettings']);
+            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
+            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
             const { text: storageText } = await chrome.storage.session.get('text');
             if (storageText) {
                 textDispatch({ type: 'set_text', value: storageText });
                 chrome.storage.session.remove('text');
+                if (currentVoice && currentVoice.voice) {
+                    alertDispatch({ type: 'generate_audio' });
+                    generateAudio(storageText, currentVoice.voice.shortName, currentSettings || settings);
+                }
+                else {
+                    alertDispatch({ type: 'no_voice_selected' });
+                }
             }
-            const { currentVoice, currentSettings } = await chrome.storage.local.get(['currentVoice', 'currentSettings']);
-            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
-            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
         })();
     }, []);
 

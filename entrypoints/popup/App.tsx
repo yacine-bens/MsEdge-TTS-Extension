@@ -50,6 +50,8 @@ const alertReducer = (state: any, action: any) => {
             return { open: true, alert: { severity: 'error', msg: 'Error occured while generating audio' } };
         case 'generate_audio':
             return { open: true, alert: { severity: 'info', msg: 'Generating audio...', icon: 'circular-progress' } };
+        case 'no_voice_selected':
+            return { open: true, alert: { severity: 'warning', msg: 'Please select a voice' } };
         default:
             return state;
     }
@@ -128,14 +130,21 @@ function App() {
 
     useEffect(() => {
         (async () => {
+            const { currentVoice, currentSettings } = await browser.storage.local.get(['currentVoice', 'currentSettings']);
+            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
+            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
             const { text: storageText } = await browser.storage.session.get('text');
             if (storageText) {
                 textDispatch({ type: 'set_text', value: storageText });
                 browser.storage.session.remove('text');
+                if(currentVoice && currentVoice.voice) {
+                    alertDispatch({ type: 'generate_audio' });
+                    generateAudio(storageText, currentVoice.voice.shortName, currentSettings || settings);
+                }
+                else {
+                    alertDispatch({ type: 'no_voice_selected' });
+                }
             }
-            const { currentVoice, currentSettings } = await browser.storage.local.get(['currentVoice', 'currentSettings']);
-            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
-            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
         })();
     }, []);
 
