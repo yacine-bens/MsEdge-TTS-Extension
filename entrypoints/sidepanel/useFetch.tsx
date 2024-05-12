@@ -109,7 +109,7 @@ const formatVoices = (voices: Record<string, any>): Record<string, any> => {
     })).reduce((acc: Record<string, any>, voice: Record<string, any>) => {
         acc[voice.language] = acc[voice.language] || {};
         acc[voice.language][voice.country] = acc[voice.language][voice.country] || {};
-        acc[voice.language][voice.country][voice.name] = voice.shortName;
+        acc[voice.language][voice.country][voice.name] = { name: voice.name, shortName: voice.shortName };
 
         return acc;
     }, {});
