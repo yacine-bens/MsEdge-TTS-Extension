@@ -79,7 +79,7 @@ function App() {
     const [voiceState, voiceDispatch] = useReducer(voiceReducer, {
         language: '',
         country: '',
-        voice: '',
+        voice: null,
     });
 
     const [text, textDispatch] = useReducer(textReducer, '');
@@ -123,7 +123,7 @@ function App() {
 
     const handleSubmit = () => {
         alertDispatch({ type: 'generate_audio' });
-        generateAudio(text, voices[voiceState.voice], settings);
+        generateAudio(text, voiceState.voice.shortName, settings);
     };
 
     useEffect(() => {
@@ -160,7 +160,7 @@ function App() {
                     <SelectAutocomplete options={countries} label="Country" value={voiceState.country} onChange={(e: any, value: string) => handleChange(value, 'select_country')} isDisabled={!voiceState.language.length} />
                 </Grid>
                 <Grid xs={1}>
-                    <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice} onChange={(e: any, value: string) => handleChange(value, 'select_voice')} isDisabled={!voiceState.country.length} />
+                    <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice && voiceState.voice.name} onChange={(e: any, value: string) => handleChange(voices[value], 'select_voice')} isDisabled={!voiceState.country.length} />
                 </Grid>
                 <Grid xs={1}>
                     <TextField
