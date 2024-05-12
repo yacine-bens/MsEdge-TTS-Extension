@@ -50,6 +50,8 @@ const alertReducer = (state: any, action: any) => {
             return { open: true, alert: { severity: 'error', msg: 'Error occured while generating audio' } };
         case 'generate_audio':
             return { open: true, alert: { severity: 'info', msg: 'Generating audio...', icon: 'circular-progress' } };
+        case 'no_voice_selected':
+            return { open: true, alert: { severity: 'warning', msg: 'Please select a voice' } };
         default:
             return state;
     }
@@ -79,7 +81,7 @@ function App() {
     const [voiceState, voiceDispatch] = useReducer(voiceReducer, {
         language: '',
         country: '',
-        voice: '',
+        voice: null,
     });
 
     const [text, textDispatch] = useReducer(textReducer, '');
@@ -123,19 +125,26 @@ function App() {
 
     const handleSubmit = () => {
         alertDispatch({ type: 'generate_audio' });
-        generateAudio(text, voices[voiceState.voice], settings);
+        generateAudio(text, voiceState.voice.shortName, settings);
     };
 
     useEffect(() => {
         (async () => {
+            const { currentVoice, currentSettings } = await browser.storage.local.get(['currentVoice', 'currentSettings']);
+            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
+            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
             const { text: storageText } = await browser.storage.session.get('text');
             if (storageText) {
                 textDispatch({ type: 'set_text', value: storageText });
                 browser.storage.session.remove('text');
+                if(currentVoice && currentVoice.voice) {
+                    alertDispatch({ type: 'generate_audio' });
+                    generateAudio(storageText, currentVoice.voice.shortName, currentSettings || settings);
+                }
+                else {
+                    alertDispatch({ type: 'no_voice_selected' });
+                }
             }
-            const { currentVoice, currentSettings } = await browser.storage.local.get(['currentVoice', 'currentSettings']);
-            if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
-            if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
         })();
     }, []);
 
@@ -160,7 +169,7 @@ function App() {
                     <SelectAutocomplete options={countries} label="Country" value={voiceState.country} onChange={(e: any, value: string) => handleChange(value, 'select_country')} isDisabled={!voiceState.language.length} />
                 </Grid>
                 <Grid xs={1}>
-                    <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice} onChange={(e: any, value: string) => handleChange(value, 'select_voice')} isDisabled={!voiceState.country.length} />
+                    <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice && voiceState.voice.name} onChange={(e: any, value: string) => handleChange(voices[value], 'select_voice')} isDisabled={!voiceState.country.length} />
                 </Grid>
                 <Grid xs={1}>
                     <TextField
