@@ -1,5 +1,6 @@
 import { useReducer, useEffect } from "react";
 import { MsEdgeTTS } from "msedge-tts";
+import { storage } from "wxt/storage";
 
 type State = {
     data: Record<string, any>;
@@ -66,7 +67,7 @@ export default function useFetch(dependency: Record<string, any>) {
 
             try {
                 const voices = await getVoices();
-                const { currentVoice } = await chrome.storage.local.get('currentVoice');
+                const currentVoice = await storage.getItem('local:currentVoice');
 
                 dispatch({ type: "SET_LANGUAGES", payload: { voices, currentVoice } });
             } catch (err) {

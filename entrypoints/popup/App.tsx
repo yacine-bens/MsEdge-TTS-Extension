@@ -7,6 +7,11 @@ import useFetch from './useFetch';
 import useTTS from './useTTS';
 import { ExpandMore } from '@mui/icons-material';
 import CustomSlider from '@/assets/components/CustomSlider';
+import { storage } from 'wxt/storage';
+
+const currentVoiceItem = storage.defineItem<Record<string, any>>('local:currentVoice');
+const currentSettingsItem = storage.defineItem<Record<string, any>>('local:currentSettings');
+const textItem = storage.defineItem<string>('session:text');
 
 const voiceReducer = (state: any, action: any) => {
     let currentVoice;
@@ -27,7 +32,7 @@ const voiceReducer = (state: any, action: any) => {
             return state;
     }
 
-    browser.storage.local.set({ currentVoice });
+    currentVoiceItem.setValue(currentVoice);
     return { ...currentVoice };
 };
 
@@ -73,7 +78,7 @@ const settingsReducer = (state: any, action: any) => {
             return state;
     }
 
-    browser.storage.local.set({ currentSettings });
+    currentSettingsItem.setValue(currentSettings);
     return { ...currentSettings };
 };
 
@@ -130,14 +135,15 @@ function App() {
 
     useEffect(() => {
         (async () => {
-            const { currentVoice, currentSettings } = await browser.storage.local.get(['currentVoice', 'currentSettings']);
+            const currentVoice = await currentVoiceItem.getValue();
+            const currentSettings = await currentSettingsItem.getValue();
             if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
             if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
-            const { text: storageText } = await browser.storage.session.get('text');
+            const storageText = await textItem.getValue();
             if (storageText) {
                 textDispatch({ type: 'set_text', value: storageText });
-                browser.storage.session.remove('text');
-                if(currentVoice && currentVoice.voice) {
+                textItem.removeValue();
+                if (currentVoice && currentVoice.voice) {
                     alertDispatch({ type: 'generate_audio' });
                     generateAudio(storageText, currentVoice.voice.shortName, currentSettings || settings);
                 }

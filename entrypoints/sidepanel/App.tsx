@@ -7,6 +7,11 @@ import useFetch from './useFetch';
 import useTTS from './useTTS';
 import { ExpandMore } from '@mui/icons-material';
 import CustomSlider from '@/assets/components/CustomSlider';
+import { storage } from 'wxt/storage';
+
+const currentVoiceItem = storage.defineItem<Record<string, any>>('local:currentVoice');
+const currentSettingsItem = storage.defineItem<Record<string, any>>('local:currentSettings');
+const textItem = storage.defineItem<string>('session:text');
 
 const voiceReducer = (state: any, action: any) => {
     let currentVoice;
@@ -27,7 +32,7 @@ const voiceReducer = (state: any, action: any) => {
             return state;
     }
 
-    chrome.storage.local.set({ currentVoice });
+    currentVoiceItem.setValue(currentVoice);
     return { ...currentVoice };
 };
 
@@ -73,7 +78,7 @@ const settingsReducer = (state: any, action: any) => {
             return state;
     }
 
-    chrome.storage.local.set({ currentSettings });
+    currentSettingsItem.setValue(currentSettings);
     return { ...currentSettings };
 };
 
@@ -139,30 +144,28 @@ function App() {
     }, [voiceState, settings]);
 
     useEffect(() => {
-        chrome.storage.session.onChanged.addListener((changes) => {
-            for (let change in changes) {
-                if (change === 'text' && changes[change].newValue) {
-                    textDispatch({ type: 'set_text', value: changes[change].newValue });
-                    chrome.storage.session.remove('text');
-                    if (voiceStateRef.current && voiceStateRef.current.voice) {
-                        alertDispatch({ type: 'generate_audio' });
-                        generateAudio(changes[change].newValue, voiceStateRef.current.voice.shortName, settingsRef.current);
-                    }
-                    else {
-                        alertDispatch({ type: 'no_voice_selected' });
-                    }
-                }
+        const unwatch = textItem.watch((newValue) => {
+            if(!newValue) return;
+            textDispatch({ type: 'set_text', value: newValue });
+            textItem.removeValue();
+            if (voiceStateRef.current && voiceStateRef.current.voice) {
+                alertDispatch({ type: 'generate_audio' });
+                generateAudio(newValue!, voiceStateRef.current.voice.shortName, settingsRef.current);
+            }
+            else {
+                alertDispatch({ type: 'no_voice_selected' });
             }
         });
 
         (async () => {
-            const { currentVoice, currentSettings } = await chrome.storage.local.get(['currentVoice', 'currentSettings']);
+            const currentVoice = await currentVoiceItem.getValue();
+            const currentSettings = await currentSettingsItem.getValue();
             if (currentVoice) voiceDispatch({ type: 'set_voice', value: currentVoice });
             if (currentSettings) settingsDispatch({ type: 'set_settings', value: currentSettings });
-            const { text: storageText } = await chrome.storage.session.get('text');
+            const storageText = await textItem.getValue();
             if (storageText) {
                 textDispatch({ type: 'set_text', value: storageText });
-                chrome.storage.session.remove('text');
+                textItem.removeValue();
                 if (currentVoice && currentVoice.voice) {
                     alertDispatch({ type: 'generate_audio' });
                     generateAudio(storageText, currentVoice.voice.shortName, currentSettings || settings);

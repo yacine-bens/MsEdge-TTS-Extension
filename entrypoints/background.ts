@@ -1,3 +1,5 @@
+import { storage } from "wxt/storage";
+
 export default defineBackground({
   type: 'module',
   main: () => {
@@ -14,12 +16,13 @@ export default defineBackground({
     chrome.contextMenus.onClicked.addListener(async (clickData, tab) => {
       if (clickData.menuItemId != "edgetts" || !clickData.selectionText) return;
 
+      const text = storage.defineItem<string>("session:text");
+      text.setValue(clickData.selectionText);
+      
       if (import.meta.env.CHROME) {
-        chrome.storage.session.set({ text: clickData.selectionText });
         chrome.sidePanel.open({ tabId: tab?.id! });
       }
       else if (import.meta.env.FIREFOX) {
-        browser.storage.session.set({ text: clickData.selectionText });
         browser.browserAction.openPopup();
       }
     });

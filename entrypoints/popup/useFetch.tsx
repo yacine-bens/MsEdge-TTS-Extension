@@ -66,7 +66,7 @@ export default function useFetch(dependency: Record<string, any>) {
 
             try {
                 const voices = await getVoices();
-                const { currentVoice } = await browser.storage.local.get('currentVoice');
+                const currentVoice = await storage.getItem('local:currentVoice');
 
                 dispatch({ type: "SET_LANGUAGES", payload: { voices, currentVoice } });
             } catch (err) {
