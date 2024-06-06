@@ -1,7 +1,7 @@
 export default defineBackground({
   type: 'module',
   main: () => {
-    if (import.meta.env.CHROME) chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(e => console.log(e));
+    // if (import.meta.env.CHROME) chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(e => console.log(e));
 
     chrome.contextMenus.removeAll(() => {
       chrome.contextMenus.create({
