@@ -8,6 +8,14 @@ const perBrowserManifest: Record<string, any> = {
       "storage",
       "contextMenus",
       "sidePanel",
+      "scripting",
+    ],
+    optional_permissions: [
+      "tabs",
+      "declarativeNetRequestWithHostAccess",
+    ],
+    optional_host_permissions: [
+      "https://*/*",
     ],
     minimum_chrome_version: "116",
   },
@@ -27,7 +35,7 @@ export default defineConfig({
       nodePolyfills(),
     ],
     optimizeDeps: {
-      include: ['@mui/icons-material', '@emotion/styled', '@emotion/react'],
+      include: ['@mui/icons-material', '@emotion/styled', '@emotion/react', '@mui/material'],
     }
   }),
   manifest: ({ browser }) => ({
