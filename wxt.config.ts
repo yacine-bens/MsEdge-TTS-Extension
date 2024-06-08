@@ -27,7 +27,7 @@ export default defineConfig({
       nodePolyfills(),
     ],
     optimizeDeps: {
-      include: ['@mui/icons-material'],
+      include: ['@mui/icons-material', '@emotion/styled', '@emotion/react'],
     }
   }),
   manifest: ({ browser }) => ({
