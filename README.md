@@ -4,6 +4,7 @@
 This is a Text-to-Speech browser extension that uses MS Edge Online TTS service.
 
 ## Features
+- ✨ Dark mode is finally here!
 - Natural Sounding Voices
 - Multiple Language Support
 - Context Menu Item

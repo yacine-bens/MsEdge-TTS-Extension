@@ -6,8 +6,8 @@ import xmlescape from 'xml-escape';
 const rateOptions = {
     0: RATE.DEFAULT,
     20: RATE.X_SLOW,
-    40: RATE.MEDIUM,
-    60: RATE.SLOW,
+    40: RATE.SLOW,
+    60: RATE.MEDIUM,
     80: RATE.FAST,
     100: RATE.X_FAST,
 };

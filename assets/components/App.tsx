@@ -1,17 +1,21 @@
-import { useEffect, useReducer, useRef } from 'react';
-import { Accordion, AccordionDetails, AccordionSummary, Button, Stack, TextField } from '@mui/material';
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Button, CssBaseline, TextField } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
 import SelectAutocomplete from '@/assets/components/SelectAutocomplete';
-import useFetch from './useFetch';
-import useTTS from './useTTS';
-import { ExpandMore } from '@mui/icons-material';
-import CustomSlider from '@/assets/components/CustomSlider';
+import useFetch from '@/assets/custom hooks/useFetch';
+import useTTS from '@/assets/custom hooks/useTTS';
 import { storage } from 'wxt/storage';
+import ButtonAppBar from '@/assets/components/ButtonAppBar';
+import TemporaryDrawer from '@/assets/components/TemporaryDrawer';
+import { useTheme, ThemeProvider, createTheme } from '@mui/material/styles';
+
+const ColorModeContext = createContext({ toggleColorMode: () => { } });
 
 const currentVoiceItem = storage.defineItem<Record<string, any>>('local:currentVoice');
 const currentSettingsItem = storage.defineItem<Record<string, any>>('local:currentSettings');
 const textItem = storage.defineItem<string>('session:text');
+const colorModeItem = storage.defineItem<'light' | 'dark'>('local:colorMode', { defaultValue: 'light' });
 
 const voiceReducer = (state: any, action: any) => {
     let currentVoice;
@@ -83,6 +87,9 @@ const settingsReducer = (state: any, action: any) => {
 };
 
 function App() {
+    const theme = useTheme();
+    const colorMode = useContext(ColorModeContext);
+
     const [voiceState, voiceDispatch] = useReducer(voiceReducer, {
         language: '',
         country: '',
@@ -105,6 +112,12 @@ function App() {
     const [voicesLoading, voicesError, languages, countries, voices] = useFetch(voiceState);
 
     const { audioUrl, audioLoading, audioError, generateAudio } = useTTS();
+
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const toggleDrawer = (open: boolean) => {
+        setIsDrawerOpen(open);
+    };
 
     const handleChange = (value: string, type: string) => {
         if (!value) return;
@@ -144,8 +157,9 @@ function App() {
     }, [voiceState, settings]);
 
     useEffect(() => {
+        // If side panel is open, clicking on context menu item will change text in storage => listen for changes => generate audio
         const unwatch = textItem.watch((newValue) => {
-            if(!newValue) return;
+            if (!newValue) return;
             textDispatch({ type: 'set_text', value: newValue });
             textItem.removeValue();
             if (voiceStateRef.current && voiceStateRef.current.voice) {
@@ -190,6 +204,9 @@ function App() {
 
     return (
         <>
+            <CssBaseline />
+            <TemporaryDrawer open={isDrawerOpen} toggleDrawer={toggleDrawer} settings={settings} handleSliderChange={handleSliderChange} />
+            <ButtonAppBar menuClick={() => toggleDrawer(true)} toggleColorMode={colorMode.toggleColorMode} colorMode={theme.palette.mode} />
             <Grid container margin={1} rowSpacing={2} columns={1}>
                 <Grid xs={1}>
                     <SelectAutocomplete options={languages} label="Language" loading={voicesLoading} value={voiceState.language} onChange={(e: any, value: string) => handleChange(value, 'select_language')} />
@@ -213,17 +230,6 @@ function App() {
                     />
                 </Grid>
                 <Grid xs={1}>
-                    <Accordion disableGutters>
-                        <AccordionSummary expandIcon={<ExpandMore />} sx={{ fontSize: 'medium' }}>Additional Settings</AccordionSummary>
-                        <AccordionDetails>
-                            <Stack spacing={2}>
-                                <CustomSlider value={settings.rate} labels={['default', 'x-slow', 'slow', 'medium', 'fast', 'x-fast']} label='Rate' onChange={(e: any, value: number) => handleSliderChange(value, 'set_rate')} />
-                                <CustomSlider value={settings.pitch} labels={['default', 'x-low', 'low', 'medium', 'high', 'x-high']} label='Pitch' onChange={(e: any, value: number) => handleSliderChange(value, 'set_pitch')} />
-                            </Stack>
-                        </AccordionDetails>
-                    </Accordion>
-                </Grid>
-                <Grid xs={1}>
                     <Button
                         variant='contained'
                         sx={{ padding: '.75rem' }}
@@ -243,4 +249,91 @@ function App() {
     );
 }
 
-export default App;
+export default function ToggleColorMode() {
+    const [mode, setMode] = useState<'light' | 'dark'>('light');
+    const colorMode = useMemo(
+        () => ({
+            toggleColorMode: () => {
+                setMode((prevMode) => {
+                    const currentMode = prevMode === 'light' ? 'dark' : 'light';
+                    colorModeItem.setValue(currentMode);
+                    return currentMode;
+                });
+            },
+        }),
+        [],
+    );
+
+    const components = {
+        dark: {
+            MuiButton: {
+                styleOverrides: {
+                    contained: {
+                        color: 'white',
+                        backgroundColor: '#304ffe',
+                        '&:hover': {
+                            backgroundColor: '#1e40ff',
+
+                        }
+                    }
+                },
+            },
+            MuiAlert: {
+                styleOverrides: {
+                    filledSuccess: {
+                        backgroundColor: 'green',
+                        color: 'white'
+                    },
+                    filledError: {
+                        backgroundColor: 'red',
+                        color: 'white'
+                    },
+                    filledWarning: {
+                        // backgroundColor: 'orange',
+                        color: 'white'
+                    },
+                    filledInfo: {
+                        backgroundColor: '#304ffe',
+                        color: 'white'
+                    },
+                }
+            }
+        },
+        light: {
+            MuiAlert: {
+                styleOverrides: {
+                    filledInfo: {
+                        backgroundColor: '#00e5ff',
+                        color: 'black'
+                    }
+                }
+            }
+        }
+    }
+
+    const theme = useMemo(
+        () =>
+            createTheme({
+                palette: {
+                    mode,
+                },
+                components: components[mode]
+            }),
+        [mode],
+    );
+
+    useEffect(() => {
+        (async () => {
+            const colorModeValue = await colorModeItem.getValue();
+            setMode(colorModeValue);
+        })();
+    }, []);
+
+    return (
+        <ColorModeContext.Provider value={colorMode}>
+            <ThemeProvider theme={theme}>
+                <App />
+            </ThemeProvider>
+        </ColorModeContext.Provider>
+    );
+};
