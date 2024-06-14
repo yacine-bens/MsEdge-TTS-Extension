@@ -56,6 +56,7 @@ export default function TemporaryDrawer(props: any) {
                 import.meta.env.CHROME &&
                 <>
                     <FormControlLabel sx={{ m: 1 }} control={<Switch checked={isSupportDev} onChange={handleSwitchChange} />} label="Support Developer ☕" />
+                    {/* @ts-expect-error */}
                     <Typography m={2}>Read more <Link href={browser.runtime.getURL('/options.html')} target="_blank">here</Link></Typography>
                     <Divider sx={{ m: 2 }} />
                 </>

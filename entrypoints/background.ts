@@ -11,7 +11,7 @@ export default defineBackground({
       MAX_DAILY_RATE: 500,
     });
 
-    browser.runtime.onInstalled.addListener(async () => {
+    const onInstalled = async () => {
       if (import.meta.env.CHROME) {
         const currentVersion = storage.defineItem<string>("local:currentVersion");
         const updateShown = storage.defineItem<boolean>("local:updateShown", { defaultValue: false });
@@ -24,6 +24,7 @@ export default defineBackground({
 
           const updateShownValue = await updateShown.getValue();
           if (!updateShownValue) {
+            // @ts-expect-error
             await browser.tabs.create({ url: browser.runtime.getURL("/options.html") });
             await updateShown.setValue(true);
           }
@@ -58,7 +59,10 @@ export default defineBackground({
           "contexts": ["selection"]
         });
       });
-    });
+    };
+
+    browser.runtime.onInstalled.addListener(onInstalled);
+    browser.runtime.onStartup.addListener(onInstalled);
 
     if (import.meta.env.CHROME) {
       (async () => {
