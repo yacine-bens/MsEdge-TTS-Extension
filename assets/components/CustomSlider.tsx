@@ -1,24 +1,24 @@
 import { Box, Typography, Slider } from "@mui/material";
 
 export default function CustomSlider(props: any) {
-    const { onChange, label, value, labels } = props;
+    const { onChange, label, value, labels, min, max, defaultValue } = props;
 
     return (
         <Box paddingInline={2}>
             <Typography textAlign={'center'}>{label}</Typography>
             <Slider
                 value={value}
-                defaultValue={0}
-                step={null}
+                defaultValue={defaultValue}
+                min={min}
+                max={max}
+                step={1}
                 track={false}
-                valueLabelDisplay='off'
+                valueLabelDisplay='auto'
+                valueLabelFormat={(value) => (value >= 0 ? '+' + value : value) + '%'}
                 marks={[
-                    { value: 0, label: labels[0] },
-                    { value: 20, label: labels[1] },
-                    { value: 40, label: labels[2] },
-                    { value: 60, label: labels[3] },
-                    { value: 80, label: labels[4] },
-                    { value: 100, label: labels[5] }
+                    { value: min, label: labels[0] },
+                    { value: defaultValue, label: labels[1] },
+                    { value: max, label: labels[2] },
                 ]}
                 onChange={onChange}
             />

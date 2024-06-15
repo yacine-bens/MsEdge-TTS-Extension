@@ -24,7 +24,6 @@ export default defineBackground({
 
           const updateShownValue = await updateShown.getValue();
           if (!updateShownValue) {
-            // @ts-expect-error
             await browser.tabs.create({ url: browser.runtime.getURL("/options.html") });
             await updateShown.setValue(true);
           }
