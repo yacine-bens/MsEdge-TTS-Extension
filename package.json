@@ -4,7 +4,7 @@
   "author": "https://github.com/yacine-bens",
   "homepage": "https://github.com/yacine-bens/MsEdge-TTS-Extension.git",
   "private": true,
-  "version": "1.2.3",
+  "version": "1.2.4",
   "type": "module",
   "scripts": {
     "dev": "wxt",
