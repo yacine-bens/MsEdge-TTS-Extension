@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import IosSwitch from "@/assets/components/IosSwitch";
 import { storage } from "wxt/storage";
 import Mellowtel from "mellowtel";
-const CONFIGURATION_KEY = "NTRiOGY0Nzg=";
+const CONFIGURATION_KEY = "YzQ3ODQ0Yjg=";
 
 function App() {
 	const mellowtel = new Mellowtel(atob(CONFIGURATION_KEY), {
