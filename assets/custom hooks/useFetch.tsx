@@ -1,6 +1,6 @@
 import { useReducer, useEffect } from "react";
-import { MsEdgeTTS } from "msedge-tts";
 import { storage } from "wxt/storage";
+import voices from "./voices";
 
 type State = {
     data: Record<string, any>;
@@ -95,23 +95,5 @@ export default function useFetch(dependency: Record<string, any>) {
 };
 
 const getVoices = async () => {
-    const tts = new MsEdgeTTS();
-    const voices = await tts.getVoices();
-    return formatVoices(voices);
-};
-
-const formatVoices = (voices: Record<string, any>): Record<string, any> => {
-    return voices.map((v: Record<string, any>) => ({
-        language: v.FriendlyName.match(/- ([a-zA-Z]+) \(/)[1],
-        country: v.FriendlyName.match(/- .*\(([^)]+)\)/)[1],
-        name: v.FriendlyName.match(/Microsoft (.+) Online/)[1],
-        gender: v.Gender,
-        shortName: v.ShortName,
-    })).reduce((acc: Record<string, any>, voice: Record<string, any>) => {
-        acc[voice.language] = acc[voice.language] || {};
-        acc[voice.language][voice.country] = acc[voice.language][voice.country] || {};
-        acc[voice.language][voice.country][voice.name] = { name: voice.name, shortName: voice.shortName };
-
-        return acc;
-    }, {});
+    return voices;
 };
