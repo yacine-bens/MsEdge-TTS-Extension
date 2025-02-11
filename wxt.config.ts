@@ -9,10 +9,11 @@ const perBrowserManifest: Record<string, any> = {
       "contextMenus",
       "sidePanel",
       "scripting",
+      'activeTab',
+      "declarativeNetRequestWithHostAccess",
     ],
     optional_permissions: [
       "tabs",
-      "declarativeNetRequestWithHostAccess",
     ],
     optional_host_permissions: [
       "https://*/*",
@@ -35,7 +36,7 @@ export default defineConfig({
       nodePolyfills(),
     ],
     optimizeDeps: {
-      include: ['@mui/icons-material', '@emotion/styled', '@emotion/react', '@mui/material'],
+      include: ['@mui/icons-material', '@emotion/styled', '@emotion/react', '@mui/material','@mui/material/Unstable_Grid2'],
     }
   }),
   manifest: ({ browser }) => ({

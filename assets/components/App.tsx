@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { Button, CssBaseline, TextField } from '@mui/material';
+import { Button, CssBaseline, IconButton, Stack, TextField } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2/Grid2';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
 import SelectAutocomplete from '@/assets/components/SelectAutocomplete';
@@ -9,6 +9,8 @@ import { storage } from 'wxt/storage';
 import ButtonAppBar from '@/assets/components/ButtonAppBar';
 import TemporaryDrawer from '@/assets/components/TemporaryDrawer';
 import { useTheme, ThemeProvider, createTheme } from '@mui/material/styles';
+import { Pause, PlayArrow, Stop } from '@mui/icons-material';
+import useRealtimeTTS from '@/assets/custom hooks/useRealtimeTTS';
 
 const ColorModeContext = createContext({ toggleColorMode: () => { } });
 
@@ -61,6 +63,10 @@ const alertReducer = (state: any, action: any) => {
             return { open: true, alert: { severity: 'info', msg: 'Generating audio...', icon: 'circular-progress' } };
         case 'no_voice_selected':
             return { open: true, alert: { severity: 'warning', msg: 'Please select a voice' } };
+        case 'custom_error':
+            return { open: true, alert: action.value };
+        case 'custom_info':
+            return { open: true, alert: action.value };
         default:
             return state;
     }
@@ -114,6 +120,8 @@ function App() {
     const { audioUrl, audioLoading, audioError, generateAudio } = useTTS();
 
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const [hasPaused, setHasPaused] = useState(false);
 
     const toggleDrawer = (open: boolean) => {
         setIsDrawerOpen(open);
@@ -192,6 +200,16 @@ function App() {
     }, []);
 
     useEffect(() => {
+        if (alertState.open) {
+            const timer = setTimeout(() => {
+                alertDispatch({ type: 'close_alert' });
+            }, 5000);
+    
+            return () => clearTimeout(timer); // Cleanup on unmount or state change
+        }
+    }, [alertState.open]);
+
+    useEffect(() => {
         if (audioUrl) {
             alertDispatch({ type: 'close_alert' });
         }
@@ -201,6 +219,56 @@ function App() {
         if (voicesError) alertDispatch({ type: 'voices_error' });
         else if (audioError) alertDispatch({ type: 'audio_error' });
     }, [voicesError, audioError]);
+
+    const {
+        isReading,
+        startReading,
+        pauseReading,
+        resumeReading,
+        stopReading
+    } = useRealtimeTTS();
+
+    const handleReadPage = async () => {
+        if (!voiceState.voice) {
+            alertDispatch({ type: 'no_voice_selected' });
+            return;
+        }
+    
+        try {
+            const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    
+            if (!tab || !tab.id) {
+                throw new Error('No active tab found');
+            }
+    
+            // Check if the tab is a Chrome or Firefox internal page
+            if (tab.url?.startsWith('chrome://') || tab.url?.startsWith('about:')) {
+                throw new Error('Cannot read content from browser internal pages.');
+            }
+    
+            const response: { content: string } = await browser.tabs.sendMessage(tab.id, { action: 'getPageContent' });
+            
+            if (!response?.content) {
+                throw new Error('No readable content found on this page.');
+            }
+            console.log("content ",response.content);
+            
+            alertDispatch({
+                type: 'custom_info',
+                value: { severity: 'info', msg: 'Starting to read page content...' }
+            });
+    
+            await startReading(response.content, voiceState.voice.shortName, settings);
+        } catch (error) {
+            alertDispatch({
+                type: 'custom_error',
+                value: {
+                    severity: 'error',
+                    msg: error instanceof Error ? error.message : 'Failed to read page content'
+                }
+            });
+        }
+    };
 
     return (
         <>
@@ -217,6 +285,39 @@ function App() {
                 <Grid xs={1}>
                     <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice && voiceState.voice.name} onChange={(e: any, value: string) => handleChange(voices[value], 'select_voice')} isDisabled={!voiceState.country.length} />
                 </Grid>
+                <Grid xs={1}>
+                    <Stack direction="row" spacing={2} justifyContent="center">
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                if (isReading) {
+                                    pauseReading();
+                                    setHasPaused(true); // Mark as paused
+                                } else if (hasPaused) {
+                                    resumeReading();
+                                } else {
+                                    handleReadPage();
+                                }
+                            }}
+                            disabled={!voiceState.voice}
+                            startIcon={isReading ? <Pause /> : <PlayArrow />}
+                        >
+                            {isReading ? "Pause" : "Play"}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                stopReading();
+                                setHasPaused(false); // Reset pause state on stop
+                            }}
+                            disabled={!voiceState.voice}
+                            startIcon={<Stop />}
+                        >
+                            Stop
+                        </Button>
+                    </Stack>
+                </Grid>
+
                 <Grid xs={1}>
                     <TextField
                         value={text}
