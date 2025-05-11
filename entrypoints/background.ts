@@ -97,17 +97,36 @@ export default defineBackground({
       }
     });
 
-    chrome.contextMenus.onClicked.addListener(async (clickData, tab) => {
-      if (clickData.menuItemId != "edgetts" || !clickData.selectionText) return;
-
-      const text = storage.defineItem<string>("session:text");
-      text.setValue(clickData.selectionText);
+    const handleTextToSpeech = async (text: string, tab?: chrome.tabs.Tab) => {
+      const textStorage = storage.defineItem<string>("session:text");
+      textStorage.setValue(text);
 
       if (import.meta.env.CHROME) {
         chrome.sidePanel.open({ tabId: tab?.id! });
       }
       else if (import.meta.env.FIREFOX) {
         browser.browserAction.openPopup();
+      }
+    };
+
+    // Handle context menu clicks
+    chrome.contextMenus.onClicked.addListener(async (clickData, tab) => {
+      if (clickData.menuItemId != "edgetts" || !clickData.selectionText) return;
+      await handleTextToSpeech(clickData.selectionText, tab);
+    });
+
+    // Handle keyboard shortcut
+    chrome.commands.onCommand.addListener(async (command) => {
+      console.log("command", command);
+      if (command === "speak-selection") {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        console.log("tab", tab);
+        const [{ result: text }] = await chrome.scripting.executeScript({
+          target: { tabId: tab.id! },
+          func: () => window.getSelection()?.toString() || ""
+        });
+
+        handleTextToSpeech(text, tab);
       }
     });
   }

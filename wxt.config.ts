@@ -9,6 +9,7 @@ const perBrowserManifest: Record<string, any> = {
       "contextMenus",
       "sidePanel",
       "scripting",
+      "commands", "tabs", "activeTab"
     ],
     optional_permissions: [
       "tabs",
@@ -23,6 +24,7 @@ const perBrowserManifest: Record<string, any> = {
     permissions: [
       'storage',
       "contextMenus",
+      "scripting", "tabs", "activeTab"
     ]
   }
 }
@@ -45,6 +47,17 @@ export default defineConfig({
     action: {
       "default_title": "MsEdge TTS"
     },
+    ...(browser === 'chrome' ? {
+      commands: {
+        "speak-selection": {
+          suggested_key: {
+            default: "Ctrl+Shift+S",
+            mac: "Command+Shift+S"
+          },
+          description: "Speak selected text"
+        }
+      }
+    } : {}),
     ...perBrowserManifest[browser],
   })
 });
