@@ -97,12 +97,16 @@ export default defineBackground({
       }
     });
 
-    const handleTextToSpeech = async (text: string, tab?: chrome.tabs.Tab) => {
+    const handleTextToSpeech = async (text: string, tab?: chrome.tabs.Tab, useSidePanel?: boolean) => {
       const textStorage = storage.defineItem<string>("session:text");
       textStorage.setValue(text);
 
       if (import.meta.env.CHROME) {
-        chrome.sidePanel.open({ tabId: tab?.id! });
+        if (useSidePanel) {
+          chrome.sidePanel.open({ tabId: tab?.id! });
+        } else {
+          chrome.action.openPopup();
+        }
       }
       else if (import.meta.env.FIREFOX) {
         browser.browserAction.openPopup();
@@ -112,21 +116,19 @@ export default defineBackground({
     // Handle context menu clicks
     chrome.contextMenus.onClicked.addListener(async (clickData, tab) => {
       if (clickData.menuItemId != "edgetts" || !clickData.selectionText) return;
-      await handleTextToSpeech(clickData.selectionText, tab);
+      await handleTextToSpeech(clickData.selectionText, tab, true);
     });
 
     // Handle keyboard shortcut
     chrome.commands.onCommand.addListener(async (command) => {
-      console.log("command", command);
       if (command === "speak-selection") {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        console.log("tab", tab);
         const [{ result: text }] = await chrome.scripting.executeScript({
           target: { tabId: tab.id! },
           func: () => window.getSelection()?.toString() || ""
         });
-
-        handleTextToSpeech(text, tab);
+        // open in the pop up for now since opening in the side bar needs more work
+        handleTextToSpeech(text, tab, false);
       }
     });
   }
