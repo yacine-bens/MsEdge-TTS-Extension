@@ -97,38 +97,45 @@ export default defineBackground({
       }
     });
 
-    const handleTextToSpeech = async (text: string, tab?: chrome.tabs.Tab, useSidePanel?: boolean) => {
+    const handleTextToSpeech = async (text: string) => {
+      if (!text || text.length === 0) return;
+
       const textStorage = storage.defineItem<string>("session:text");
       textStorage.setValue(text);
+    };
 
+    const openUI = async (tab: chrome.tabs.Tab, useSidePanel?: boolean) => {
       if (import.meta.env.CHROME) {
         if (useSidePanel) {
-          chrome.sidePanel.open({ tabId: tab?.id! });
-        } else {
+          chrome.sidePanel.open({ tabId: tab.id! });
+        }
+        else {
           chrome.action.openPopup();
         }
       }
       else if (import.meta.env.FIREFOX) {
         browser.browserAction.openPopup();
       }
-    };
+    }
 
     // Handle context menu clicks
     chrome.contextMenus.onClicked.addListener(async (clickData, tab) => {
       if (clickData.menuItemId != "edgetts" || !clickData.selectionText) return;
-      await handleTextToSpeech(clickData.selectionText, tab, true);
+      // TODO: add user preference for side panel or popup
+      openUI(tab!, true);
+      await handleTextToSpeech(clickData.selectionText);
     });
 
     // Handle keyboard shortcut
-    chrome.commands.onCommand.addListener(async (command) => {
+    chrome.commands.onCommand.addListener(async (command, tab) => {
       if (command === "speak-selection") {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        const [{ result: text }] = await chrome.scripting.executeScript({
+        // TODO: add user preference for side panel or popup
+        openUI(tab, false);
+        const [{ result: text }] = await browser.scripting.executeScript({
           target: { tabId: tab.id! },
           func: () => window.getSelection()?.toString() || ""
         });
-        // open in the pop up for now since opening in the side bar needs more work
-        handleTextToSpeech(text, tab, false);
+        handleTextToSpeech(text);
       }
     });
   }
