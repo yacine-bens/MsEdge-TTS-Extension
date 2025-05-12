@@ -9,7 +9,7 @@ const perBrowserManifest: Record<string, any> = {
       "contextMenus",
       "sidePanel",
       "scripting",
-      "commands", "tabs", "activeTab"
+      "activeTab",
     ],
     optional_permissions: [
       "tabs",
@@ -18,14 +18,34 @@ const perBrowserManifest: Record<string, any> = {
     optional_host_permissions: [
       "https://*/*",
     ],
+    commands: {
+      "speak-selection": {
+        suggested_key: {
+          default: "Ctrl+Shift+S",
+          mac: "Command+Shift+S"
+        },
+        description: "Speak selected text"
+      }
+    },
     minimum_chrome_version: "116",
   },
   firefox: {
     permissions: [
       'storage',
       "contextMenus",
-      "scripting", "tabs", "activeTab"
-    ]
+      "scripting",
+      "activeTab",
+    ],
+    commands: {
+      "speak-selection": {
+        suggested_key: {
+          // for firefox, Ctrl+Shift+S is already used for "screenshots"
+          default: "Ctrl+Shift+F",
+          mac: "Command+Shift+F"
+        },
+        description: "Speak selected text"
+      }
+    },
   }
 }
 
@@ -47,17 +67,6 @@ export default defineConfig({
     action: {
       "default_title": "MsEdge TTS"
     },
-    ...(browser === 'chrome' ? {
-      commands: {
-        "speak-selection": {
-          suggested_key: {
-            default: "Ctrl+Shift+S",
-            mac: "Command+Shift+S"
-          },
-          description: "Speak selected text"
-        }
-      }
-    } : {}),
     ...perBrowserManifest[browser],
   })
 });
