@@ -31,11 +31,11 @@ const getAudioUrl = async (text: string, voice: string, settings: Record<string,
     await tts.setMetadata(voice || DEFAULT_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
     return await new Promise<string>(resolve => {
         const escapedText = xmlescape(text);
-        const readable = tts.toStream(escapedText, { pitch: settings.pitch + '%', rate: settings.rate + '%', volume: 100 });
-        let data64: any = '';
+        const { audioStream: readable } = tts.toStream(escapedText, { pitch: settings.pitch + '%', rate: settings.rate + '%', volume: 100 });
+        let data64 = Buffer.from([]);
 
         readable.on('data', data => {
-            data64 = Buffer.concat([Buffer.from(data64), Buffer.from(data)]);
+            data64 = Buffer.concat([data64, data]);
         });
 
         readable.on('end', async () => {

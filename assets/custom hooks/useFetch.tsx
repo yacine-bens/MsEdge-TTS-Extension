@@ -1,5 +1,5 @@
 import { useReducer, useEffect } from "react";
-import { storage } from "wxt/storage";
+import { storage } from "#imports";
 import voices from "./voices";
 
 type State = {

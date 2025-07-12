@@ -1,11 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Button, CssBaseline, TextField } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2/Grid2';
+import Grid from '@mui/material/Grid';
 import SnackbarAlert from '@/assets/components/SnackbarAlert';
 import SelectAutocomplete from '@/assets/components/SelectAutocomplete';
 import useFetch from '@/assets/custom hooks/useFetch';
 import useTTS from '@/assets/custom hooks/useTTS';
-import { storage } from 'wxt/storage';
+import { storage } from '#imports';
 import ButtonAppBar from '@/assets/components/ButtonAppBar';
 import TemporaryDrawer from '@/assets/components/TemporaryDrawer';
 import { useTheme, ThemeProvider, createTheme } from '@mui/material/styles';
@@ -208,16 +208,16 @@ function App() {
             <TemporaryDrawer open={isDrawerOpen} toggleDrawer={toggleDrawer} settings={settings} handleSliderChange={handleSliderChange} />
             <ButtonAppBar menuClick={() => toggleDrawer(true)} toggleColorMode={colorMode.toggleColorMode} colorMode={theme.palette.mode} />
             <Grid container margin={1} rowSpacing={2} columns={1}>
-                <Grid xs={1}>
+                <Grid size={1}>
                     <SelectAutocomplete options={languages} label="Language" loading={voicesLoading} value={voiceState.language} onChange={(e: any, value: string) => handleChange(value, 'select_language')} />
                 </Grid>
-                <Grid xs={1}>
+                <Grid size={1}>
                     <SelectAutocomplete options={countries} label="Country" value={voiceState.country} onChange={(e: any, value: string) => handleChange(value, 'select_country')} isDisabled={!voiceState.language.length} />
                 </Grid>
-                <Grid xs={1}>
+                <Grid size={1}>
                     <SelectAutocomplete options={Object.keys(voices)} label="Voice" value={voiceState.voice && voiceState.voice.name} onChange={(e: any, value: string) => handleChange(voices[value], 'select_voice')} isDisabled={!voiceState.country.length} />
                 </Grid>
-                <Grid xs={1}>
+                <Grid size={1}>
                     <TextField
                         value={text}
                         onChange={handleTextChange}
@@ -229,7 +229,7 @@ function App() {
                         maxRows={20}
                     />
                 </Grid>
-                <Grid xs={1}>
+                <Grid size={1}>
                     <Button
                         variant='contained'
                         sx={{ padding: '.75rem' }}
@@ -240,7 +240,7 @@ function App() {
                         Generate Audio
                     </Button>
                 </Grid>
-                <Grid xs={1}>
+                <Grid size={1}>
                     <audio src={audioUrl} autoPlay controls style={{ width: '100%' }}></audio>
                 </Grid>
             </Grid>

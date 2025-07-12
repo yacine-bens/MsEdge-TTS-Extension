@@ -1,72 +1,70 @@
-import { defineConfig } from 'wxt';
-import react from '@vitejs/plugin-react';
+import { defineConfig, UserManifest } from 'wxt';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
-const perBrowserManifest: Record<string, any> = {
+const perBrowserManifest: Record<string, Record<number, UserManifest>> = {
   chrome: {
-    permissions: [
-      "storage",
-      "contextMenus",
-      "sidePanel",
-      "scripting",
-      "activeTab",
-    ],
-    optional_permissions: [
-      "tabs",
-      "declarativeNetRequestWithHostAccess",
-    ],
-    optional_host_permissions: [
-      "https://*/*",
-    ],
-    commands: {
-      "speak-selection": {
-        suggested_key: {
-          default: "Ctrl+Shift+S",
-          mac: "Command+Shift+S"
-        },
-        description: "Speak selected text"
-      }
+    3: {
+      version: "1.2.9",
+      permissions: [
+        "storage",
+        "contextMenus",
+        "sidePanel",
+        "scripting",
+        "activeTab",
+      ],
+      commands: {
+        "speak-selection": {
+          suggested_key: {
+            default: "Ctrl+Shift+S",
+            mac: "Command+Shift+S"
+          },
+          description: "Speak selected text"
+        }
+      },
+      minimum_chrome_version: "116",
     },
-    minimum_chrome_version: "116",
   },
   firefox: {
-    permissions: [
-      'storage',
-      "contextMenus",
-      "scripting",
-      "activeTab",
-    ],
-    commands: {
-      "speak-selection": {
-        suggested_key: {
-          // for firefox, Ctrl+Shift+S is already used for "screenshots"
-          default: "Ctrl+Shift+F",
-          mac: "Command+Shift+F"
-        },
-        description: "Speak selected text"
-      }
+    2: {
+      version: "1.2.9",
+      permissions: [
+        "storage",
+        "contextMenus",
+        "scripting",
+        "activeTab",
+      ],
+      commands: {
+        "speak-selection": {
+          suggested_key: {
+            // for firefox, Ctrl+Shift+S is already used for "screenshots"
+            default: "Ctrl+Shift+F",
+            mac: "Command+Shift+F"
+          },
+          description: "Speak selected text"
+        }
+      },
     },
   }
-}
+};
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
+  modules: ['@wxt-dev/module-react'],
   vite: () => ({
     plugins: [
-      react(),
-      nodePolyfills(),
+      nodePolyfills() as any,
     ],
     optimizeDeps: {
       include: ['@mui/icons-material', '@emotion/styled', '@emotion/react', '@mui/material'],
     }
   }),
-  manifest: ({ browser }) => ({
+  manifest: ({ browser, manifestVersion }) => ({
     name: "MS Edge TTS (Text to Speech)",
     author: "https://github.com/yacine-bens",
     homepage_url: "https://github.com/yacine-bens/MsEdge-TTS-Extension.git",
     action: {
       "default_title": "MsEdge TTS"
     },
-    ...perBrowserManifest[browser],
+    ...perBrowserManifest[browser][manifestVersion],
   })
 });
