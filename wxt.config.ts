@@ -4,7 +4,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 const perBrowserManifest: Record<string, Record<number, UserManifest>> = {
   chrome: {
     3: {
-      version: "1.2.10",
+      version: "1.3.0",
       permissions: [
         "storage",
         "contextMenus",
@@ -26,7 +26,7 @@ const perBrowserManifest: Record<string, Record<number, UserManifest>> = {
   },
   firefox: {
     2: {
-      version: "1.2.10",
+      version: "1.3.0",
       permissions: [
         "storage",
         "contextMenus",
